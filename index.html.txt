@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MALVO - Invoicing & Billing</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f1f5f9; padding: 20px; color: #333; }
+    .layout-wrapper { display: flex; gap: 20px; max-width: 1250px; margin: 0 auto; }
+    
+    /* സൈഡ്ബാർ */
+    .history-panel { width: 320px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); height: fit-content; }
+    .history-panel h3 { margin-bottom: 15px; color: #0f172a; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+    .invoice-list { list-style: none; max-height: 550px; overflow-y: auto; }
+    .invoice-card { padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; position: relative; }
+    .invoice-card:hover { border-color: #0284c7; background: #f8fafc; }
+    .invoice-card h4 { font-size: 15px; color: #1e293b; margin-bottom: 4px; }
+    .invoice-card p { font-size: 13px; color: #64748b; margin-bottom: 2px; }
+    .card-actions { margin-top: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-delete-inv { background: #fee2e2; color: #dc2626; border: none; padding: 2px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; }
+    .btn-new-inv { width: 100%; background: #0284c7; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-bottom: 15px; }
+
+    /* പ്രധാന ഇൻവോയ്സ് ഏരിയ */
+    .container { flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; }
+    .company-details input { font-size: 24px; font-weight: bold; border: none; border-bottom: 1px dashed #ccc; width: 100%; margin-bottom: 6px; outline: none; letter-spacing: 0.5px; color: #0f172a; }
+    .company-details textarea { width: 100%; border: none; border-bottom: 1px dashed #ccc; resize: none; outline: none; color: #475569; font-size: 14px; line-height: 1.4; }
+    .invoice-meta { text-align: right; }
+    .invoice-meta h2 { color: #1e293b; margin-bottom: 10px; letter-spacing: 1px; }
+    .invoice-meta input { padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 5px; }
+
+    .client-details { margin-bottom: 25px; }
+    .client-details h4 { margin-bottom: 8px; color: #475569; }
+    .client-details input, .client-details textarea { width: 100%; max-width: 350px; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 6px; outline: none; display: block; }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #f8fafc; color: #475569; padding: 10px; border-bottom: 2px solid #cbd5e1; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+    td input { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; }
+
+    .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+    .btn-add { background: #0284c7; color: white; margin-bottom: 20px; }
+    .btn-delete { background: #ef4444; color: white; }
+    .btn-save { background: #0284c7; color: white; font-size: 15px; padding: 10px 18px; margin-right: 8px; }
+    .btn-whatsapp { background: #25d366; color: white; font-size: 15px; padding: 10px 18px; margin-right: 8px; font-weight: 600; }
+    .btn-print { background: #0f172a; color: white; font-size: 15px; padding: 10px 18px; }
+
+    .totals-area { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .totals-table { width: 320px; }
+    .totals-table tr td { border: none; padding: 6px; }
+    .grand-total { font-size: 18px; font-weight: bold; color: #0f172a; border-top: 2px solid #333 !important; }
+
+    .actions { margin-top: 30px; text-align: right; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .history-panel, .btn, .actions, .delete-col { display: none !important; }
+      .layout-wrapper { display: block; }
+      .container { box-shadow: none; padding: 0; width: 100%; }
+      input, textarea { border: none !important; background: transparent !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout-wrapper">
+  <!-- ഹിസ്റ്ററി പാനൽ -->
+  <div class="history-panel">
+    <button class="btn-new-inv" onclick="createNewInvoice()">+ പുതിയ ഇൻവോയ്സ് (New)</button>
+    <h3>സേവ് ചെയ്ത ഇൻവോയ്സുകൾ</h3>
+    <ul class="invoice-list" id="invoiceHistoryList"></ul>
+  </div>
+
+  <!-- പ്രധാന ഇൻവോയ്സ് കണ്ടെയ്നർ -->
+  <div class="container">
+    <div class="header">
+      <div class="company-details">
+        <input type="text" id="companyName" value="MALVO" placeholder="Business Name">
+        <textarea id="companyInfo" rows="3" placeholder="Address, Phone, GSTIN">BIV COMPLEX, OPPOSITE GOVT. VETERINARY HOSPITAL&#10;CHERUVANCHERI&#10;Mob: +91 9020587459</textarea>
+      </div>
+      <div class="invoice-meta">
+        <h2>INVOICE</h2>
+        <div>
+          <label>Invoice No: </label>
+          <input type="text" id="invNo" value="INV-001">
+        </div>
+        <div>
+          <label>Date: </label>
+          <input type="date" id="invDate">
+        </div>
+      </div>
+    </div>
+
+    <div class="client-details">
+      <h4>ബിൽ ചെയ്യേണ്ട വ്യക്തി / സ്ഥാപനം:</h4>
+      <input type="text" id="customerName" placeholder="കസ്റ്റമറുടെ പേര്">
+      <input type="text" id="customerPhone" placeholder="WhatsApp നമ്പർ (10 അക്കം)">
+      <textarea id="customerAddress" rows="2" placeholder="കസ്റ്റമറുടെ വിലാസം"></textarea>
+    </div>
+
+    <table id="itemsTable">
+      <thead>
+        <tr>
+          <th style="width: 35%;">വിവരണം (Item Name)</th>
+          <th style="width: 12%;">അളവ് (Qty)</th>
+          <th style="width: 15%;">വില (Price)</th>
+          <th style="width: 15%;">GST %</th>
+          <th style="width: 15%;">ആകെ (Total)</th>
+          <th class="delete-col" style="width: 8%;"></th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody">
+        <tr>
+          <td><input type="text" class="item-name" placeholder="Item description" value="Service / Work"></td>
+          <td><input type="number" class="qty" value="1" min="1" oninput="calculate()"></td>
+          <td><input type="number" class="price" value="1000" min="0" oninput="calculate()"></td>
+          <td><input type="number" class="tax" value="18" min="0" oninput="calculate()"></td>
+          <td class="line-total" style="font-weight: 500;">₹ 1180.00</td>
+          <td class="delete-col"><button class="btn btn-delete" onclick="deleteRow(this)">X</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button class="btn btn-add" onclick="addRow()">+ ഐറ്റം ചേർക്കുക (Add Item)</button>
+
+    <div class="totals-area">
+      <table class="totals-table">
+        <tr>
+          <td>സബ്‌ടോട്ടൽ:</td>
+          <td id="subTotal" style="text-align: right;">₹ 0.00</td>
+        </tr>
+        <tr>
+          <td>ആകെ ജി.എസ്.ടി (Tax):</td>
+          <td id="taxTotal" style="text-align: right;">₹ 0.00</td>
+        </tr>
+        <tr class="grand-total">
+          <td>ആകെ തുക (Grand Total):</td>
+          <td id="grandTotal" style="text-align: right;">₹ 0.00</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-save" onclick="saveInvoice()">സേവ് ചെയ്യുക</button>
+      <button class="btn btn-whatsapp" onclick="shareOnWhatsApp()">WhatsApp അയക്കുക</button>
+      <button class="btn btn-print" onclick="window.print()">പ്രിന്റ് / PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('invDate').valueAsDate = new Date();
+
+  function calculate() {
+    const rows = document.querySelectorAll('#itemsBody tr');
+    let subtotal = 0;
+    let totalTax = 0;
+
+    rows.forEach(row => {
+      const qty = parseFloat(row.querySelector('.qty').value) || 0;
+      const price = parseFloat(row.querySelector('.price').value) || 0;
+      const taxRate = parseFloat(row.querySelector('.tax').value) || 0;
+
+      const baseAmount = qty * price;
+      const taxAmount = (baseAmount * taxRate) / 100;
+      const totalAmount = baseAmount + taxAmount;
+
+      subtotal += baseAmount;
+      totalTax += taxAmount;
+
+      row.querySelector('.line-total').innerText = '₹ ' + totalAmount.toFixed(2);
+    });
+
+    const grandTotal = subtotal + totalTax;
+
+    document.getElementById('subTotal').innerText = '₹ ' + subtotal.toFixed(2);
+    document.getElementById('taxTotal').innerText = '₹ ' + totalTax.toFixed(2);
+    document.getElementById('grandTotal').innerText = '₹ ' + grandTotal.toFixed(2);
+  }
+
+  function addRow(name = '', qty = 1, price = 0, tax = 18) {
+    const tbody = document.getElementById('itemsBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="item-name" placeholder="Item description" value="${name}"></td>
+      <td><input type="number" class="qty" value="${qty}" min="1" oninput="calculate()"></td>
+      <td><input type="number" class="price" value="${price}" min="0" oninput="calculate()"></td>
+      <td><input type="number" class="tax" value="${tax}" min="0" oninput="calculate()"></td>
+      <td class="line-total" style="font-weight: 500;">₹ 0.00</td>
+      <td class="delete-col"><button class="btn btn-delete" onclick="deleteRow(this)">X</button></td>
+    `;
+    tbody.appendChild(tr);
+    calculate();
+  }
+
+  function deleteRow(btn) {
+    const tbody = document.getElementById('itemsBody');
+    if (tbody.children.length > 1) {
+      btn.closest('tr').remove();
+      calculate();
+    } else {
+      alert('കുറഞ്ഞത് ഒരു ഐറ്റം എങ്കിലും ആവശ്യമാണ്.');
+    }
+  }
+
+  function shareOnWhatsApp() {
+    const phoneInput = document.getElementById('customerPhone').value.trim();
+    let phone = phoneInput.replace(/[^0-9]/g, '');
+
+    if (!phone) {
+      alert('ദയവായി കസ്റ്റമറുടെ WhatsApp നമ്പർ രേഖപ്പെടുത്തുക.');
+      return;
+    }
+
+    if (phone.length === 10) {
+      phone = '91' + phone;
+    }
+
+    const companyName = document.getElementById('companyName').value || 'MALVO';
+    const invNo = document.getElementById('invNo').value;
+    const invDate = document.getElementById('invDate').value;
+    const customerName = document.getElementById('customerName').value || 'Customer';
+    const grandTotal = document.getElementById('grandTotal').innerText;
+
+    let itemsList = '';
+    document.querySelectorAll('#itemsBody tr').forEach((row, index) => {
+      const name = row.querySelector('.item-name').value || 'Item';
+      const qty = row.querySelector('.qty').value;
+      const total = row.querySelector('.line-total').innerText;
+      itemsList += `${index + 1}. *${name}* (Qty: ${qty}) - ${total}\n`;
+    });
+
+    const message = 
+      `*INVOICE SUMMARY*\n` +
+      `--------------------------\n` +
+      `സ്ഥാപനം: *${companyName}*\n` +
+      `ഇൻവോയ്സ് നമ്പർ: *${invNo}*\n` +
+      `തീയതി: ${invDate}\n` +
+      `കസ്റ്റമർ: *${customerName}*\n` +
+      `--------------------------\n` +
+      `*വിവരങ്ങൾ:*\n${itemsList}` +
+      `--------------------------\n` +
+      `*ആകെ തുക: ${grandTotal}*\n\n` +
+      `ഞങ്ങളുമായി ഇടപാട് നടത്തിയതിന് നന്ദി!`;
+
+    const encodedMessage = encodeURIComponent(message);
+    const waUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+    window.open(waUrl, '_blank');
+  }
+
+  function getSavedInvoices() {
+    return JSON.parse(localStorage.getItem('my_invoices') || '[]');
+  }
+
+  function saveInvoice() {
+    const invNo = document.getElementById('invNo').value.trim();
+    if (!invNo) {
+      alert('ഇൻവോയ്സ് നമ്പർ നൽകുക.');
+      return;
+    }
+
+    const items = [];
+    document.querySelectorAll('#itemsBody tr').forEach(row => {
+      items.push({
+        name: row.querySelector('.item-name').value,
+        qty: row.querySelector('.qty').value,
+        price: row.querySelector('.price').value,
+        tax: row.querySelector('.tax').value
+      });
+    });
+
+    const invoiceData = {
+      id: invNo,
+      date: document.getElementById('invDate').value,
+      companyName: document.getElementById('companyName').value,
+      companyInfo: document.getElementById('companyInfo').value,
+      customerName: document.getElementById('customerName').value,
+      customerPhone: document.getElementById('customerPhone').value,
+      customerAddress: document.getElementById('customerAddress').value,
+      items: items,
+      grandTotal: document.getElementById('grandTotal').innerText
+    };
+
+    let invoices = getSavedInvoices();
+    const existingIndex = invoices.findIndex(inv => inv.id === invNo);
+
+    if (existingIndex > -1) {
+      invoices[existingIndex] = invoiceData;
+    } else {
+      invoices.push(invoiceData);
+    }
+
+    localStorage.setItem('my_invoices', JSON.stringify(invoices));
+    alert('ഇൻവോയ്സ് വിജയകരമായി സേവ് ചെയ്തു!');
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('invoiceHistoryList');
+    list.innerHTML = '';
+    const invoices = getSavedInvoices();
+
+    if (invoices.length === 0) {
+      list.innerHTML = '<li style="color: #94a3b8; font-size: 14px;">സേവ് ചെയ്ത ഇൻവോയ്സുകൾ ഇല്ല.</li>';
+      return;
+    }
+
+    invoices.slice().reverse().forEach(inv => {
+      const li = document.createElement('li');
+      li.className = 'invoice-card';
+      li.innerHTML = `
+        <h4>${inv.id} - ${inv.customerName || 'No Name'}</h4>
+        <p>തീയതി: ${inv.date}</p>
+        <div class="card-actions">
+          <strong>${inv.grandTotal}</strong>
+          <button class="btn-delete-inv" onclick="deleteInvoice('${inv.id}', event)">Delete</button>
+        </div>
+      `;
+      li.onclick = () => loadInvoice(inv.id);
+      list.appendChild(li);
+    });
+  }
+
+  function loadInvoice(id) {
+    const invoices = getSavedInvoices();
+    const inv = invoices.find(item => item.id === id);
+    if (!inv) return;
+
+    document.getElementById('invNo').value = inv.id;
+    document.getElementById('invDate').value = inv.date;
+    document.getElementById('companyName').value = inv.companyName;
+    document.getElementById('companyInfo').value = inv.companyInfo;
+    document.getElementById('customerName').value = inv.customerName;
+    document.getElementById('customerPhone').value = inv.customerPhone;
+    document.getElementById('customerAddress').value = inv.customerAddress;
+
+    const tbody = document.getElementById('itemsBody');
+    tbody.innerHTML = '';
+    inv.items.forEach(it => {
+      addRow(it.name, it.qty, it.price, it.tax);
+    });
+
+    calculate();
+  }
+
+  function deleteInvoice(id, event) {
+    event.stopPropagation();
+    if (!confirm('ഈ ഇൻവോയ്സ് ഒഴിവാക്കണോ?')) return;
+
+    let invoices = getSavedInvoices().filter(inv => inv.id !== id);
+    localStorage.setItem('my_invoices', JSON.stringify(invoices));
+    renderHistory();
+  }
+
+  function createNewInvoice() {
+    const invoices = getSavedInvoices();
+    document.getElementById('invNo').value = 'INV-' + String(invoices.length + 1).padStart(3, '0');
+    document.getElementById('invDate').valueAsDate = new Date();
+    document.getElementById('customerName').value = '';
+    document.getElementById('customerPhone').value = '';
+    document.getElementById('customerAddress').value = '';
+    
+    const tbody = document.getElementById('itemsBody');
+    tbody.innerHTML = '';
+    addRow('Service / Work', 1, 0, 18);
+  }
+
+  calculate();
+  renderHistory();
+</script>
+
+</body>
+</html>
