@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MALVO - Invoicing & Billing Portal</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f1f5f9; padding: 20px; color: #333; }
+
+    /* Login Modal Overlay */
+    .login-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: linear-gradient(135deg, #0f172a, #1e293b); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .login-card { background: #fff; width: 380px; padding: 35px 30px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; }
+    .login-card h2 { color: #0f172a; font-size: 24px; margin-bottom: 6px; letter-spacing: 1px; }
+    .login-card p { color: #64748b; font-size: 13px; margin-bottom: 25px; }
+    .login-field { margin-bottom: 15px; text-align: left; }
+    .login-field label { display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .login-field input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 14px; outline: none; transition: 0.2s; }
+    .login-field input:focus { border-color: #0284c7; }
+    .btn-login { width: 100%; background: #0284c7; color: white; border: none; padding: 12px; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+    .btn-login:hover { background: #0369a1; }
+    .login-error { color: #dc2626; font-size: 13px; margin-top: 12px; display: none; font-weight: 500; }
+
+    /* Change Password Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); display: none; align-items: center; justify-content: center; z-index: 9998; }
+    .modal-card { background: #fff; width: 380px; padding: 30px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); }
+    .modal-card h3 { color: #0f172a; margin-bottom: 15px; font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+    .btn-cancel { background: #e2e8f0; color: #475569; border: none; padding: 8px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn-save-pwd { background: #0284c7; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+    /* Top Navigation Bar */
+    .top-nav { max-width: 1240px; margin: 0 auto 15px auto; display: flex; justify-content: space-between; align-items: center; }
+    .user-tag { font-size: 13px; font-weight: 600; color: #475569; }
+    .top-nav-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-chg-pwd { background: #f8fafc; color: #0284c7; border: 1px solid #cbd5e1; padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-chg-pwd:hover { background: #f1f5f9; border-color: #0284c7; }
+    .btn-logout { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-logout:hover { background: #fecaca; }
+
+    /* Main Desktop App Layout */
+    .layout-wrapper { display: flex; gap: 20px; max-width: 1240px; margin: 0 auto; }
+    
+    /* Sidebar */
+    .history-panel { width: 340px; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); height: fit-content; }
+    .history-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; }
+    .history-header h3 { color: #0f172a; font-size: 18px; margin: 0; }
+    .btn-settings { background: none; border: none; cursor: pointer; font-size: 16px; color: #64748b; }
+    .btn-settings:hover { color: #0f172a; }
+    
+    /* Search Bar */
+    .search-box-wrapper { margin-bottom: 12px; position: relative; }
+    .search-box-wrapper input { width: 100%; padding: 8px 30px 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; background: #f8fafc; transition: 0.2s; }
+    .search-box-wrapper input:focus { border-color: #0284c7; background: #fff; }
+    .search-clear-btn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; display: none; }
+    
+    .invoice-list { list-style: none; max-height: 520px; overflow-y: auto; }
+    
+    /* Invoice Card Styling */
+    .invoice-card { padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; position: relative; }
+    .invoice-card:hover { border-color: #0284c7; }
+    
+    /* Due Invoices - Highlighted in Red */
+    .invoice-card.has-due { border-left: 5px solid #dc2626; background: #fff5f5; border-color: #fca5a5; }
+    .invoice-card.has-due:hover { border-color: #dc2626; }
+    
+    /* Paid Invoices - Soft Green */
+    .invoice-card.is-paid { border-left: 5px solid #16a34a; background: #f8fafc; }
+    .invoice-card.is-locked { opacity: 0.95; }
+    
+    .invoice-card h4 { font-size: 15px; color: #1e293b; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .invoice-card p { font-size: 13px; color: #64748b; margin-bottom: 4px; }
+    .card-actions { margin-top: 6px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .due-amount-text { font-size: 13px; font-weight: 700; color: #dc2626; }
+    .paid-amount-text { font-size: 13px; font-weight: 600; color: #16a34a; }
+    
+    /* Card Paid Checkbox Bar */
+    .card-paid-toggle { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e2e8f0; color: #1e293b; }
+    .card-paid-toggle input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; accent-color: #16a34a; }
+
+    .card-btns { display: flex; gap: 4px; align-items: center; }
+    .btn-lock { background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; }
+    .btn-lock.locked { background: #fef3c7; border-color: #f59e0b; color: #b45309; }
+    .btn-delete-inv { background: #fee2e2; color: #dc2626; border: none; padding: 3px 6px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 500; }
+    .btn-delete-inv:disabled { opacity: 0.4; cursor: not-allowed; background: #e2e8f0; color: #94a3b8; }
+    
+    .btn-card-reminder { background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; border-radius: 4px; padding: 2px 6px; font-size: 11px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 3px; }
+    .btn-card-reminder:hover { background: #fecaca; }
+
+    .btn-new-inv { width: 100%; background: #0284c7; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-bottom: 12px; }
+
+    /* Main Invoice Container */
+    .container { flex: 1; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 20px; }
+    
+    /* Logo Area */
+    .logo-container { margin-bottom: 12px; }
+    .logo-preview { max-height: 70px; max-width: 180px; object-fit: contain; display: none; margin-bottom: 6px; }
+    .logo-controls { display: flex; gap: 8px; align-items: center; }
+    .btn-upload { background: #f1f5f9; border: 1px dashed #94a3b8; padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; color: #475569; font-weight: 500; }
+    .btn-remove-logo { background: #fee2e2; border: none; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; display: none; }
+
+    .company-details input { font-size: 24px; font-weight: bold; border: none; border-bottom: 1px dashed #ccc; width: 100%; margin-bottom: 6px; outline: none; letter-spacing: 0.5px; color: #0f172a; }
+    .company-details textarea { width: 100%; border: none; border-bottom: 1px dashed #ccc; resize: none; outline: none; color: #475569; font-size: 14px; line-height: 1.4; }
+    .invoice-meta { text-align: right; }
+    .invoice-meta h2 { color: #1e293b; margin-bottom: 10px; letter-spacing: 1px; }
+    .invoice-meta input { padding: 5px 8px; border: 1px solid #cbd5e1; border-radius: 4px; margin-bottom: 6px; }
+
+    /* Lock Status Badge */
+    .lock-banner { display: none; background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; padding: 8px 12px; border-radius: 4px; margin-bottom: 15px; font-size: 13px; color: #92400e; font-weight: 500; }
+
+    /* Client / Owner Details Section */
+    .client-section { margin-bottom: 20px; }
+    .client-section h4 { font-size: 14px; text-transform: uppercase; color: #64748b; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .client-section input, .client-section textarea { width: 100%; max-width: 380px; padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; margin-bottom: 6px; display: block; font-size: 14px; }
+
+    /* WhatsApp Phone Input */
+    .share-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 25px; background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0; max-width: 380px; }
+    .share-bar label { font-size: 13px; font-weight: 600; color: #475569; }
+    .share-bar input { padding: 6px 10px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; flex: 1; }
+
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #f8fafc; color: #475569; padding: 10px; border-bottom: 2px solid #cbd5e1; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+    td input, td select { width: 100%; padding: 6px; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; background: #fff; }
+
+    .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; }
+    .btn-add { background: #0284c7; color: white; margin-bottom: 20px; }
+    .btn-delete { background: #ef4444; color: white; }
+    
+    /* Action Bar Buttons */
+    .btn-save { background: #0284c7; color: white; font-size: 14px; padding: 9px 18px; margin-right: 6px; font-weight: 600; }
+    .btn-whatsapp { background: #25d366; color: white; font-size: 14px; padding: 9px 16px; margin-right: 6px; font-weight: 600; }
+    .btn-reminder-wa { background: #ea580c; color: white; font-size: 14px; padding: 9px 16px; margin-right: 6px; font-weight: 600; }
+    .btn-reminder-sms { background: #475569; color: white; font-size: 14px; padding: 9px 16px; margin-right: 6px; font-weight: 600; }
+    .btn-print { background: #0f172a; color: white; font-size: 14px; padding: 9px 16px; }
+
+    /* Footer Section */
+    .invoice-footer { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 15px; gap: 20px; }
+    .payment-info { flex: 1; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .payment-info h4 { font-size: 13px; text-transform: uppercase; color: #0284c7; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .payment-info textarea { width: 100%; border: none; background: transparent; resize: none; outline: none; color: #334155; font-size: 13px; line-height: 1.5; font-family: inherit; }
+    
+    .totals-area { width: 330px; }
+    .totals-table { width: 100%; }
+    .totals-table tr td { border: none; padding: 5px; }
+    .totals-table input { width: 110px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: right; outline: none; font-weight: 500; }
+    .net-payable-row { font-weight: 600; color: #0f172a; border-top: 1px dashed #cbd5e1 !important; border-bottom: 1px dashed #cbd5e1 !important; }
+    .balance-row { font-size: 17px; font-weight: bold; color: #b91c1c; border-top: 2px solid #333 !important; }
+
+    /* Form Paid Checkbox Row */
+    .paid-checkbox-row { background: #f0fdf4; border-radius: 4px; padding: 4px 0; }
+    .paid-checkbox-row label { font-size: 13px; font-weight: 600; color: #166534; cursor: pointer; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+    .paid-checkbox-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #16a34a; }
+
+    /* Amount in Words Box */
+    .words-box { margin-top: 15px; padding: 10px 14px; background: #f8fafc; border-left: 3px solid #0284c7; font-size: 13px; color: #334155; }
+    .words-box strong { color: #0f172a; }
+
+    .actions { margin-top: 30px; text-align: right; border-top: 1px solid #e2e8f0; padding-top: 20px; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .top-nav, .history-panel, .btn, .actions, .delete-col, .share-bar, .logo-controls, .lock-banner, .paid-checkbox-row { display: none !important; }
+      .layout-wrapper { display: block; }
+      .container { box-shadow: none; padding: 0; width: 100%; }
+      input, textarea, select { border: none !important; background: transparent !important; -webkit-appearance: none; appearance: none; }
+      .payment-info, .words-box { border: 1px solid #cbd5e1; background: transparent; }
+      .totals-table input { border: none !important; text-align: right !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Login Authentication Overlay -->
+<div id="loginOverlay" class="login-overlay">
+  <div class="login-card">
+    <h2>MALVO</h2>
+    <p>Invoicing & Billing Portal</p>
+    
+    <div class="login-field">
+      <label for="loginMobile">Mobile / Username</label>
+      <input type="text" id="loginMobile" placeholder="Enter mobile number" autocomplete="username">
+    </div>
+    
+    <div class="login-field">
+      <label for="loginPassword">Password</label>
+      <input type="password" id="loginPassword" placeholder="Enter password" autocomplete="current-password" onkeypress="if(event.key === 'Enter') checkLogin()">
+    </div>
+    
+    <button class="btn-login" onclick="checkLogin()">Sign In</button>
+    <div id="loginError" class="login-error">Invalid Mobile Number or Password!</div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="pwdModal" class="modal-overlay">
+  <div class="modal-card">
+    <h3>Change Password</h3>
+    
+    <div class="login-field">
+      <label for="oldPwd">Current Password</label>
+      <input type="password" id="oldPwd" placeholder="Enter current password">
+    </div>
+    
+    <div class="login-field">
+      <label for="newPwd">New Password</label>
+      <input type="password" id="newPwd" placeholder="Enter new password">
+    </div>
+    
+    <div class="login-field">
+      <label for="confirmPwd">Confirm New Password</label>
+      <input type="password" id="confirmPwd" placeholder="Re-enter new password">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closePwdModal()">Cancel</button>
+      <button class="btn-save-pwd" onclick="saveNewPassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Top Navigation -->
+<div class="top-nav">
+  <span class="user-tag" id="userBadge">Logged in as: 9020587459</span>
+  <div class="top-nav-actions">
+    <button class="btn-chg-pwd" onclick="openPwdModal()">🔑 Change Password</button>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<!-- Predefined Services -->
+<datalist id="presetItems">
+  <option value="SITE VISIT">
+  <option value="INITIAL SKETCH FOR DISCUTION">
+  <option value="BUILDING PERMIT DRAWING">
+  <option value="FILE IMPORT TO KSMART">
+  <option value="TAX ASSESMENT">
+  <option value="VILLAGE ONE TIME TAX">
+</datalist>
+
+<div class="layout-wrapper">
+  <!-- History Panel -->
+  <div class="history-panel">
+    <button class="btn-new-inv" onclick="createNewInvoice()">+ New Invoice</button>
+    <div class="history-header">
+      <h3>Saved Invoices</h3>
+      <button class="btn-settings" onclick="configureSheetURL()" title="Google Sheet Settings">⚙️</button>
+    </div>
+    
+    <!-- Real-time Search Box -->
+    <div class="search-box-wrapper">
+      <input type="text" id="searchInvoiceInput" placeholder="🔍 Search by Client Name or No..." oninput="handleSearchInvoices()">
+      <button id="searchClearBtn" class="search-clear-btn" onclick="clearSearch()" title="Clear Search">✕</button>
+    </div>
+
+    <ul class="invoice-list" id="invoiceHistoryList"></ul>
+  </div>
+
+  <!-- Main Invoice -->
+  <div class="container">
+    <div class="header">
+      <div class="company-details">
+        <!-- Logo Section -->
+        <div class="logo-container">
+          <img id="logoImg" class="logo-preview" alt="MALVO Logo">
+          <div class="logo-controls">
+            <label class="btn-upload">
+              Upload Logo
+              <input type="file" id="logoInput" accept="image/*" style="display: none;" onchange="handleLogoUpload(this)">
+            </label>
+            <button class="btn-remove-logo" id="btnRemoveLogo" onclick="removeLogo()">Remove</button>
+          </div>
+        </div>
+
+        <input type="text" id="companyName" value="MALVO" placeholder="Business Name">
+        <textarea id="companyInfo" rows="3" placeholder="Address, Phone">BIV COMPLEX, OPPOSITE GOVT. VETERINARY HOSPITAL&#10;CHERUVANCHERI&#10;Mob: +91 9020587459</textarea>
+      </div>
+      <div class="invoice-meta">
+        <h2>INVOICE</h2>
+        <div>
+          <label>Invoice No: </label>
+          <input type="text" id="invNo" value="INV-001">
+        </div>
+        <div>
+          <label>Date: </label>
+          <input type="date" id="invDate">
+        </div>
+      </div>
+    </div>
+
+    <!-- Lock Status Notice Banner -->
+    <div id="lockBanner" class="lock-banner">
+      🔒 This invoice is <strong>Locked</strong>. Unlock it from the left panel to edit or delete.
+    </div>
+
+    <!-- Client / Owner Details -->
+    <div class="client-section">
+      <h4>Bill To / Client Details</h4>
+      <input type="text" id="clientName" placeholder="Owner / Client Name">
+      <textarea id="clientAddress" rows="2" placeholder="Site Address / Location"></textarea>
+    </div>
+
+    <!-- WhatsApp Phone Input -->
+    <div class="share-bar">
+      <label for="customerPhone">WhatsApp / Mobile:</label>
+      <input type="text" id="customerPhone" placeholder="10-digit Mobile No">
+    </div>
+
+    <!-- Items Table -->
+    <table id="itemsTable">
+      <thead>
+        <tr>
+          <th style="width: 44%;">Item Description</th>
+          <th style="width: 12%;">Qty</th>
+          <th style="width: 13%;">Unit</th>
+          <th style="width: 13%;">Rate (₹)</th>
+          <th style="width: 14%;">Total (₹)</th>
+          <th class="delete-col" style="width: 4%;"></th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody">
+        <tr>
+          <td><input type="text" class="item-name" list="presetItems" placeholder="Select service..." value="SITE VISIT" oninput="handleItemSelect(this)"></td>
+          <td><input type="number" class="qty" value="1" min="0.01" step="any" oninput="calculate()"></td>
+          <td>
+            <select class="unit">
+              <option value="Nos" selected>Nos</option>
+              <option value="Sq.ft">Sq.ft</option>
+              <option value="Cents">Cents</option>
+              <option value="Hours">Hours</option>
+              <option value="Days">Days</option>
+              <option value="L.S">L.S</option>
+            </select>
+          </td>
+          <td><input type="number" class="price" value="2000" min="0" step="any" oninput="calculate()"></td>
+          <td class="line-total" style="font-weight: 500;">₹ 2000.00</td>
+          <td class="delete-col"><button class="btn btn-delete" onclick="deleteRow(this)">X</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <button class="btn btn-add" id="btnAddRow" onclick="addRow()">+ Add Item</button>
+
+    <!-- Footer: Bank Details & Totals -->
+    <div class="invoice-footer">
+      <div class="payment-info">
+        <h4>Bank & Payment Details</h4>
+        <textarea id="paymentDetails" rows="4" placeholder="Enter Bank Details, GPay, PhonePe">Bank: State Bank of India
+A/C No: XXXXXXXXXXXX
+IFSC: SBIN000XXXX
+Branch: Cheruvancheri
+GPay / PhonePe: 9020587459</textarea>
+      </div>
+
+      <div class="totals-area">
+        <table class="totals-table">
+          <tr>
+            <td>Total Amount:</td>
+            <td id="grandTotal" style="text-align: right; font-weight: 500;">₹ 0.00</td>
+          </tr>
+          <tr>
+            <td>Discount:</td>
+            <td style="text-align: right;">
+              - ₹ <input type="number" id="discount" value="0" min="0" step="any" oninput="calculate()">
+            </td>
+          </tr>
+          <tr class="net-payable-row">
+            <td>Net Payable:</td>
+            <td id="netPayable" style="text-align: right;">₹ 0.00</td>
+          </tr>
+          <tr>
+            <td>Advance Paid:</td>
+            <td style="text-align: right;">
+              ₹ <input type="number" id="advancePaid" value="0" min="0" step="any" oninput="handleAdvanceInput()">
+            </td>
+          </tr>
+          <!-- Form Checkbox to mark fully paid -->
+          <tr class="paid-checkbox-row">
+            <td colspan="2">
+              <label>
+                <input type="checkbox" id="markPaidCheckbox" onchange="handleFormPaidToggle(this)">
+                Mark as Fully Paid (₹0 Due)
+              </label>
+            </td>
+          </tr>
+          <tr class="balance-row">
+            <td>Balance Due:</td>
+            <td id="balanceDue" style="text-align: right;">₹ 0.00</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Amount In Words Display Box -->
+    <div class="words-box">
+      <strong>Amount in Words (Balance Due): </strong>
+      <span id="amountInWords">Zero Rupees Only</span>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-save" id="btnSaveInvoice" onclick="saveInvoice()">Save Invoice</button>
+      <button class="btn btn-whatsapp" onclick="shareOnWhatsApp()">Send Bill (WA)</button>
+      <button class="btn btn-reminder-wa" onclick="sendPaymentReminderWA()">🔔 WA Reminder</button>
+      <button class="btn btn-reminder-sms" onclick="sendPaymentReminderSMS()">💬 SMS Reminder</button>
+      <button class="btn btn-print" onclick="window.print()">Print / PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Dynamic Authentication Config ---
+  const DEFAULT_AUTH = {
+    mobile: "9020587459",
+    password: "malvo123"
+  };
+
+  function getStoredPassword() {
+    return localStorage.getItem('malvo_custom_pwd') || DEFAULT_AUTH.password;
+  }
+
+  function checkLogin() {
+    const mobInput = document.getElementById('loginMobile').value.trim();
+    const passInput = document.getElementById('loginPassword').value.trim();
+    const errElem = document.getElementById('loginError');
+
+    const currentPwd = getStoredPassword();
+
+    if (mobInput === DEFAULT_AUTH.mobile && passInput === currentPwd) {
+      sessionStorage.setItem('malvo_auth', 'true');
+      sessionStorage.setItem('malvo_user', mobInput);
+      document.getElementById('loginOverlay').style.display = 'none';
+      document.getElementById('userBadge').innerText = 'Logged in as: ' + mobInput;
+      errElem.style.display = 'none';
+    } else {
+      errElem.style.display = 'block';
+    }
+  }
+
+  function logout() {
+    sessionStorage.removeItem('malvo_auth');
+    sessionStorage.removeItem('malvo_user');
+    location.reload();
+  }
+
+  function verifySession() {
+    const isAuth = sessionStorage.getItem('malvo_auth');
+    if (isAuth === 'true') {
+      document.getElementById('loginOverlay').style.display = 'none';
+      const user = sessionStorage.getItem('malvo_user') || DEFAULT_AUTH.mobile;
+      document.getElementById('userBadge').innerText = 'Logged in as: ' + user;
+    } else {
+      document.getElementById('loginOverlay').style.display = 'flex';
+    }
+  }
+
+  // --- Change Password Modal Functions ---
+  function openPwdModal() {
+    document.getElementById('oldPwd').value = '';
+    document.getElementById('newPwd').value = '';
+    document.getElementById('confirmPwd').value = '';
+    document.getElementById('pwdModal').style.display = 'flex';
+  }
+
+  function closePwdModal() {
+    document.getElementById('pwdModal').style.display = 'none';
+  }
+
+  function saveNewPassword() {
+    const oldP = document.getElementById('oldPwd').value.trim();
+    const newP = document.getElementById('newPwd').value.trim();
+    const confP = document.getElementById('confirmPwd').value.trim();
+
+    const currentPwd = getStoredPassword();
+
+    if (oldP !== currentPwd) {
+      alert('Current password does not match!');
+      return;
+    }
+
+    if (!newP) {
+      alert('Please enter a new password!');
+      return;
+    }
+
+    if (newP !== confP) {
+      alert('New password and Confirm password do not match!');
+      return;
+    }
+
+    localStorage.setItem('malvo_custom_pwd', newP);
+    alert('Password updated successfully! Next time please log in with your new password.');
+    closePwdModal();
+  }
+
+  document.getElementById('invDate').valueAsDate = new Date();
+
+  const priceCatalog = {
+    "SITE VISIT": { price: 2000, unit: "Nos" },
+    "INITIAL SKETCH FOR DISCUTION": { price: 2000, unit: "Nos" },
+    "BUILDING PERMIT DRAWING": { price: 100, unit: "Sq.ft" },
+    "FILE IMPORT TO KSMART": { price: 2000, unit: "Nos" },
+    "TAX ASSESMENT": { price: 2000, unit: "Nos" },
+    "VILLAGE ONE TIME TAX": { price: 1000, unit: "Nos" }
+  };
+
+  function parseNumeric(val) {
+    if (!val) return 0;
+    const cleanStr = val.toString().replace(/[^0-9.-]/g, '');
+    return parseFloat(cleanStr) || 0;
+  }
+
+  function numberToWordsINR(amount) {
+    if (amount <= 0) return 'Zero Rupees Only';
+
+    const units = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+    function convertTwoDigits(n) {
+      if (n === 0) return '';
+      if (n < 10) return units[n];
+      if (n < 20) return teens[n - 10];
+      const t = tens[Math.floor(n / 10)];
+      const u = units[n % 10];
+      return t + (u ? ' ' + u : '');
+    }
+
+    function convertThreeDigits(n) {
+      const h = Math.floor(n / 100);
+      const r = n % 100;
+      let str = '';
+      if (h > 0) str += units[h] + ' Hundred';
+      if (r > 0) str += (str ? ' ' : '') + convertTwoDigits(r);
+      return str;
+    }
+
+    const wholePart = Math.floor(amount);
+    const paisePart = Math.round((amount - wholePart) * 100);
+
+    const crore = Math.floor(wholePart / 10000000);
+    let rem = wholePart % 10000000;
+    const lakh = Math.floor(rem / 100000);
+    rem = rem % 100000;
+    const thousand = Math.floor(rem / 1000);
+    const hundred = rem % 1000;
+
+    let res = '';
+    if (crore > 0) res += convertTwoDigits(crore) + ' Crore ';
+    if (lakh > 0) res += convertTwoDigits(lakh) + ' Lakh ';
+    if (thousand > 0) res += convertTwoDigits(thousand) + ' Thousand ';
+    if (hundred > 0) res += convertThreeDigits(hundred) + ' ';
+
+    res = res.trim() + ' Rupees';
+
+    if (paisePart > 0) {
+      res += ' and ' + convertTwoDigits(paisePart) + ' Paise';
+    }
+
+    return res + ' Only';
+  }
+
+  function handleLogoUpload(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const logoData = e.target.result;
+        displayLogo(logoData);
+        localStorage.setItem('malvo_logo', logoData);
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function displayLogo(src) {
+    const img = document.getElementById('logoImg');
+    const btnRemove = document.getElementById('btnRemoveLogo');
+    img.src = src;
+    img.style.display = 'block';
+    btnRemove.style.display = 'inline-block';
+  }
+
+  function removeLogo() {
+    const img = document.getElementById('logoImg');
+    const btnRemove = document.getElementById('btnRemoveLogo');
+    img.src = '';
+    img.style.display = 'none';
+    btnRemove.style.display = 'none';
+    localStorage.removeItem('malvo_logo');
+    document.getElementById('logoInput').value = '';
+  }
+
+  function loadSavedLogo() {
+    const savedLogo = localStorage.getItem('malvo_logo');
+    if (savedLogo) {
+      displayLogo(savedLogo);
+    }
+  }
+
+  function handleItemSelect(inputElem) {
+    const row = inputElem.closest('tr');
+    const selectedVal = inputElem.value.trim().toUpperCase();
+
+    for (const [key, details] of Object.entries(priceCatalog)) {
+      if (selectedVal === key.toUpperCase()) {
+        row.querySelector('.price').value = details.price;
+        row.querySelector('.unit').value = details.unit;
+        break;
+      }
+    }
+    calculate();
+  }
+
+  function handleAdvanceInput() {
+    const total = getTotalFromItems();
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const netPayable = Math.max(0, total - discount);
+    const advance = parseFloat(document.getElementById('advancePaid').value) || 0;
+
+    const chk = document.getElementById('markPaidCheckbox');
+    chk.checked = (advance >= netPayable && netPayable > 0);
+    calculate();
+  }
+
+  function handleFormPaidToggle(checkbox) {
+    const total = getTotalFromItems();
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const netPayable = Math.max(0, total - discount);
+
+    if (checkbox.checked) {
+      document.getElementById('advancePaid').value = netPayable;
+    } else {
+      document.getElementById('advancePaid').value = 0;
+    }
+    calculate();
+  }
+
+  function getTotalFromItems() {
+    let total = 0;
+    document.querySelectorAll('#itemsBody tr').forEach(row => {
+      const qty = parseFloat(row.querySelector('.qty').value) || 0;
+      const price = parseFloat(row.querySelector('.price').value) || 0;
+      total += (qty * price);
+    });
+    return total;
+  }
+
+  function calculate() {
+    const rows = document.querySelectorAll('#itemsBody tr');
+    let total = 0;
+
+    rows.forEach(row => {
+      const qty = parseFloat(row.querySelector('.qty').value) || 0;
+      const price = parseFloat(row.querySelector('.price').value) || 0;
+      const lineTotal = qty * price;
+
+      total += lineTotal;
+      row.querySelector('.line-total').innerText = '₹ ' + lineTotal.toFixed(2);
+    });
+
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const advance = parseFloat(document.getElementById('advancePaid').value) || 0;
+    
+    const netPayable = Math.max(0, total - discount);
+    const balance = Math.max(0, netPayable - advance);
+
+    document.getElementById('grandTotal').innerText = '₹ ' + total.toFixed(2);
+    document.getElementById('netPayable').innerText = '₹ ' + netPayable.toFixed(2);
+    document.getElementById('balanceDue').innerText = '₹ ' + balance.toFixed(2);
+
+    document.getElementById('markPaidCheckbox').checked = (balance <= 0.01 && netPayable > 0);
+
+    const words = numberToWordsINR(balance);
+    document.getElementById('amountInWords').innerText = words;
+  }
+
+  function addRow(name = '', qty = 1, unit = 'Nos', price = 0) {
+    const tbody = document.getElementById('itemsBody');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="item-name" list="presetItems" placeholder="Select service..." value="${name}" oninput="handleItemSelect(this)"></td>
+      <td><input type="number" class="qty" value="${qty}" min="0.01" step="any" oninput="calculate()"></td>
+      <td>
+        <select class="unit">
+          <option value="Nos" ${unit === 'Nos' ? 'selected' : ''}>Nos</option>
+          <option value="Sq.ft" ${unit === 'Sq.ft' ? 'selected' : ''}>Sq.ft</option>
+          <option value="Cents" ${unit === 'Cents' ? 'selected' : ''}>Cents</option>
+          <option value="Hours" ${unit === 'Hours' ? 'selected' : ''}>Hours</option>
+          <option value="Days" ${unit === 'Days' ? 'selected' : ''}>Days</option>
+          <option value="L.S" ${unit === 'L.S' ? 'selected' : ''}>L.S</option>
+        </select>
+      </td>
+      <td><input type="number" class="price" value="${price}" min="0" step="any" oninput="calculate()"></td>
+      <td class="line-total" style="font-weight: 500;">₹ 0.00</td>
+      <td class="delete-col"><button class="btn btn-delete" onclick="deleteRow(this)">X</button></td>
+    `;
+    tbody.appendChild(tr);
+    calculate();
+  }
+
+  function deleteRow(btn) {
+    const tbody = document.getElementById('itemsBody');
+    if (tbody.children.length > 1) {
+      btn.closest('tr').remove();
+      calculate();
+    } else {
+      alert('At least one item is required.');
+    }
+  }
+
+  function configureSheetURL() {
+    const current = localStorage.getItem('malvo_gsheet_url') || '';
+    const newURL = prompt("Enter or Update Google Apps Script Web App URL:", current);
+    if (newURL !== null) {
+      if (newURL.trim() === '') {
+        localStorage.removeItem('malvo_gsheet_url');
+        alert("Google Sheet sync disabled.");
+      } else {
+        localStorage.setItem('malvo_gsheet_url', newURL.trim());
+        alert("Google Sheet URL updated successfully!");
+      }
+    }
+  }
+
+  function getCleanPhone(rawPhone) {
+    let phone = (rawPhone || '').replace(/[^0-9]/g, '');
+    if (phone.length === 10) phone = '91' + phone;
+    return phone;
+  }
+
+  function shareOnWhatsApp() {
+    const phoneInput = document.getElementById('customerPhone').value.trim();
+    let phone = getCleanPhone(phoneInput);
+
+    if (!phone) {
+      alert('Please enter a WhatsApp phone number.');
+      return;
+    }
+
+    const companyName = document.getElementById('companyName').value || 'MALVO';
+    const invNo = document.getElementById('invNo').value;
+    const invDate = document.getElementById('invDate').value;
+    const clientName = document.getElementById('clientName').value.trim();
+    const grandTotal = document.getElementById('grandTotal').innerText;
+    const discount = parseFloat(document.getElementById('discount').value) || 0;
+    const netPayable = document.getElementById('netPayable').innerText;
+    const advancePaid = parseFloat(document.getElementById('advancePaid').value) || 0;
+    const balanceDue = document.getElementById('balanceDue').innerText;
+    const amountInWords = document.getElementById('amountInWords').innerText;
+    const paymentInfo = document.getElementById('paymentDetails').value.trim();
+
+    let itemsList = '';
+    document.querySelectorAll('#itemsBody tr').forEach((row, index) => {
+      const name = row.querySelector('.item-name').value || 'Item';
+      const qty = row.querySelector('.qty').value;
+      const unit = row.querySelector('.unit').value;
+      const price = row.querySelector('.price').value;
+      const total = row.querySelector('.line-total').innerText;
+      itemsList += `${index + 1}. *${name}* (${qty} ${unit} @ ₹${price}) = ${total}\n`;
+    });
+
+    let clientText = clientName ? `Client: *${clientName}*\n` : '';
+    let payText = paymentInfo ? `\n*Payment Details:*\n${paymentInfo}\n` : '';
+    let discountText = discount > 0 ? `Discount: - ₹${discount.toFixed(2)}\nNet Payable: ${netPayable}\n` : '';
+
+    const message = 
+      `*INVOICE*\n` +
+      `--------------------------\n` +
+      `From: *${companyName}*\n` +
+      `Invoice No: *${invNo}*\n` +
+      `Date: ${invDate}\n` +
+      clientText +
+      `--------------------------\n` +
+      `*Items:*\n${itemsList}` +
+      `--------------------------\n` +
+      `*Total Amount: ${grandTotal}*\n` +
+      discountText +
+      `Advance Paid: ₹${advancePaid.toFixed(2)}\n` +
+      `*Balance Due: ${balanceDue}*\n` +
+      `(${amountInWords})\n` +
+      payText +
+      `--------------------------\n` +
+      `Thank you for your business!`;
+
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  }
+
+  function sendPaymentReminderWA() {
+    const phoneInput = document.getElementById('customerPhone').value.trim();
+    let phone = getCleanPhone(phoneInput);
+
+    if (!phone) {
+      alert('Please enter a WhatsApp phone number.');
+      return;
+    }
+
+    const balanceDue = document.getElementById('balanceDue').innerText;
+    const dueNumeric = parseNumeric(balanceDue);
+
+    if (dueNumeric <= 0) {
+      alert('This invoice has no pending due amount.');
+      return;
+    }
+
+    const companyName = document.getElementById('companyName').value || 'MALVO';
+    const invNo = document.getElementById('invNo').value;
+    const clientName = document.getElementById('clientName').value.trim();
+    const paymentInfo = document.getElementById('paymentDetails').value.trim();
+
+    const greeting = clientName ? `Dear *${clientName}*` : `Dear Client`;
+
+    const reminderMessage = 
+      `*PAYMENT REMINDER*\n` +
+      `--------------------------\n` +
+      `${greeting},\n\n` +
+      `This is a gentle reminder regarding the pending balance for Invoice No: *${invNo}* from *${companyName}*.\n\n` +
+      `*Pending Balance Due: ${balanceDue}*\n` +
+      `--------------------------\n` +
+      `*Payment Details:*\n${paymentInfo}\n` +
+      `--------------------------\n` +
+      `Kindly arrange the payment at your earliest convenience. If already paid, please ignore this message.\n\n` +
+      `Thank you!\n*${companyName}*`;
+
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(reminderMessage)}`, '_blank');
+  }
+
+  function sendPaymentReminderSMS() {
+    const rawPhone = document.getElementById('customerPhone').value.trim();
+    let phone = rawPhone.replace(/[^0-9]/g, '');
+
+    if (!phone) {
+      alert('Please enter a mobile phone number.');
+      return;
+    }
+
+    if (phone.length === 12 && phone.startsWith('91')) {
+      phone = phone.substring(2);
+    }
+
+    const balanceDue = document.getElementById('balanceDue').innerText;
+    const dueNumeric = parseNumeric(balanceDue);
+
+    if (dueNumeric <= 0) {
+      alert('This invoice has no pending due amount.');
+      return;
+    }
+
+    const companyName = document.getElementById('companyName').value || 'MALVO';
+    const invNo = document.getElementById('invNo').value;
+    const clientName = document.getElementById('clientName').value.trim();
+
+    const nameStr = clientName ? `${clientName}, ` : '';
+    const smsMessage = `Dear ${nameStr}Gentle reminder from ${companyName}. The pending balance for Invoice ${invNo} is ${balanceDue}. GPay/PhonePe: 9020587459. Thank you!`;
+
+    window.location.href = `sms:${phone}?body=${encodeURIComponent(smsMessage)}`;
+  }
+
+  function quickSendReminderWA(id, event) {
+    event.stopPropagation();
+    const invoices = getSavedInvoices();
+    const inv = invoices.find(item => item.id === id);
+    if (!inv) return;
+
+    let phone = getCleanPhone(inv.customerPhone);
+    if (!phone) {
+      alert('No phone number saved for this invoice! Please open and enter a phone number.');
+      return;
+    }
+
+    const greeting = inv.clientName ? `Dear *${inv.clientName}*` : `Dear Client`;
+    const message = 
+      `*PAYMENT REMINDER*\n` +
+      `--------------------------\n` +
+      `${greeting},\n\n` +
+      `This is a gentle reminder regarding the pending balance for Invoice No: *${inv.id}* from *${inv.companyName || 'MALVO'}*.\n\n` +
+      `*Pending Balance Due: ${inv.balanceDue}*\n` +
+      `--------------------------\n` +
+      `*Payment Details:*\n${inv.paymentDetails || 'GPay / PhonePe: 9020587459'}\n` +
+      `--------------------------\n` +
+      `Kindly arrange the payment at your convenience.\nThank you!`;
+
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  }
+
+  function getSavedInvoices() {
+    return JSON.parse(localStorage.getItem('my_invoices') || '[]');
+  }
+
+  function handleSearchInvoices() {
+    const query = document.getElementById('searchInvoiceInput').value.trim().toLowerCase();
+    const clearBtn = document.getElementById('searchClearBtn');
+    clearBtn.style.display = query ? 'block' : 'none';
+    renderHistory(query);
+  }
+
+  function clearSearch() {
+    const searchInput = document.getElementById('searchInvoiceInput');
+    searchInput.value = '';
+    document.getElementById('searchClearBtn').style.display = 'none';
+    renderHistory('');
+    searchInput.focus();
+  }
+
+  async function toggleInvoicePaidFromCard(id, checkboxElem, event) {
+    event.stopPropagation();
+    const invoices = getSavedInvoices();
+    const inv = invoices.find(item => item.id === id);
+    if (!inv) return;
+
+    if (inv.locked) {
+      alert('⚠️ This invoice is locked! Unlock it before changing payment status.');
+      checkboxElem.checked = !checkboxElem.checked;
+      return;
+    }
+
+    const totalNum = parseNumeric(inv.grandTotal);
+    const discountNum = parseNumeric(inv.discount);
+    const netPayable = Math.max(0, totalNum - discountNum);
+
+    if (checkboxElem.checked) {
+      inv.advancePaid = netPayable;
+      inv.balanceDue = "₹ 0.00";
+    } else {
+      inv.advancePaid = 0;
+      inv.balanceDue = "₹ " + netPayable.toFixed(2);
+    }
+
+    inv.amountInWords = numberToWordsINR(parseNumeric(inv.balanceDue));
+    localStorage.setItem('my_invoices', JSON.stringify(invoices));
+
+    const currentActiveId = document.getElementById('invNo').value.trim();
+    if (currentActiveId === id) {
+      loadInvoice(id);
+    }
+
+    const query = document.getElementById('searchInvoiceInput').value.trim().toLowerCase();
+    renderHistory(query);
+
+    let scriptURL = localStorage.getItem('malvo_gsheet_url');
+    if (scriptURL && scriptURL.trim()) {
+      let itemsSummaryList = (inv.items || []).map(it => `${it.name} (${it.qty} ${it.unit})`);
+      const payload = {
+        action: "save",
+        id: inv.id,
+        date: inv.date,
+        clientName: inv.clientName || 'N/A',
+        customerPhone: inv.customerPhone || 'N/A',
+        itemsSummary: itemsSummaryList.join(', '),
+        grandTotal: inv.grandTotal,
+        discount: inv.discount || '0',
+        advancePaid: inv.advancePaid || '0',
+        balanceDue: inv.balanceDue
+      };
+
+      try {
+        await fetch(scriptURL.trim(), {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        console.error("GSheet update error:", err);
+      }
+    }
+  }
+
+  function toggleInvoiceLock(id, event) {
+    event.stopPropagation();
+    let invoices = getSavedInvoices();
+    const inv = invoices.find(item => item.id === id);
+    if (!inv) return;
+
+    inv.locked = !inv.locked;
+    localStorage.setItem('my_invoices', JSON.stringify(invoices));
+    
+    const query = document.getElementById('searchInvoiceInput').value.trim().toLowerCase();
+    renderHistory(query);
+
+    const currentActiveId = document.getElementById('invNo').value.trim();
+    if (currentActiveId === id) {
+      applyLockStateToForm(inv.locked);
+    }
+  }
+
+  function applyLockStateToForm(isLocked) {
+    const banner = document.getElementById('lockBanner');
+    banner.style.display = isLocked ? 'block' : 'none';
+  }
+
+  async function saveInvoice() {
+    const invNo = document.getElementById('invNo').value.trim();
+    if (!invNo) {
+      alert('Please provide an Invoice Number.');
+      return;
+    }
+
+    let invoices = getSavedInvoices();
+    const existingIndex = invoices.findIndex(inv => inv.id === invNo);
+
+    if (existingIndex > -1 && invoices[existingIndex].locked) {
+      alert('⚠️ This invoice is LOCKED! Please unlock it from the left panel before saving changes.');
+      return;
+    }
+
+    const items = [];
+    const itemsSummaryList = [];
+
+    document.querySelectorAll('#itemsBody tr').forEach(row => {
+      const name = row.querySelector('.item-name').value;
+      const qty = row.querySelector('.qty').value;
+      const unit = row.querySelector('.unit').value;
+      const price = row.querySelector('.price').value;
+
+      items.push({ name, qty, unit, price });
+      itemsSummaryList.push(`${name} (${qty} ${unit})`);
+    });
+
+    const isCurrentlyLocked = (existingIndex > -1) ? Boolean(invoices[existingIndex].locked) : false;
+
+    const invoiceData = {
+      id: invNo,
+      date: document.getElementById('invDate').value,
+      companyName: document.getElementById('companyName').value,
+      companyInfo: document.getElementById('companyInfo').value,
+      clientName: document.getElementById('clientName').value,
+      clientAddress: document.getElementById('clientAddress').value,
+      customerPhone: document.getElementById('customerPhone').value,
+      paymentDetails: document.getElementById('paymentDetails').value,
+      discount: document.getElementById('discount').value,
+      advancePaid: document.getElementById('advancePaid').value,
+      items: items,
+      grandTotal: document.getElementById('grandTotal').innerText,
+      netPayable: document.getElementById('netPayable').innerText,
+      balanceDue: document.getElementById('balanceDue').innerText,
+      amountInWords: document.getElementById('amountInWords').innerText,
+      locked: isCurrentlyLocked
+    };
+
+    if (existingIndex > -1) {
+      invoices[existingIndex] = invoiceData;
+    } else {
+      invoices.push(invoiceData);
+    }
+
+    localStorage.setItem('my_invoices', JSON.stringify(invoices));
+    
+    const query = document.getElementById('searchInvoiceInput').value.trim().toLowerCase();
+    renderHistory(query);
+
+    let scriptURL = localStorage.getItem('malvo_gsheet_url');
+    if (!scriptURL) {
+      scriptURL = prompt("Google Sheet Auto-Sync: Please enter your Google Apps Script Web App URL (One-time setup):");
+      if (scriptURL && scriptURL.trim()) {
+        localStorage.setItem('malvo_gsheet_url', scriptURL.trim());
+      }
+    }
+
+    if (scriptURL && scriptURL.trim()) {
+      const btn = document.getElementById('btnSaveInvoice');
+      const originalText = btn.innerText;
+      btn.innerText = 'Saving & Syncing...';
+      btn.disabled = true;
+
+      const payload = {
+        action: "save",
+        id: invNo,
+        date: invoiceData.date,
+        clientName: invoiceData.clientName || 'N/A',
+        customerPhone: invoiceData.customerPhone || 'N/A',
+        itemsSummary: itemsSummaryList.join(', '),
+        grandTotal: invoiceData.grandTotal,
+        discount: invoiceData.discount || '0',
+        advancePaid: invoiceData.advancePaid || '0',
+        balanceDue: invoiceData.balanceDue
+      };
+
+      try {
+        await fetch(scriptURL.trim(), {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        alert('Invoice saved locally and synced to Google Sheet!');
+      } catch (err) {
+        alert('Invoice saved locally, but Google Sheet sync failed: ' + err.message);
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
+      }
+    } else {
+      alert('Invoice saved locally! (Google Sheet sync was skipped)');
+    }
+  }
+
+  function renderHistory(searchQuery = '') {
+    const list = document.getElementById('invoiceHistoryList');
+    list.innerHTML = '';
+    const invoices = getSavedInvoices();
+
+    if (invoices.length === 0) {
+      list.innerHTML = '<li style="color: #94a3b8; font-size: 14px; text-align: center; padding: 15px;">No saved invoices found.</li>';
+      return;
+    }
+
+    const filteredInvoices = invoices.filter(inv => {
+      if (!searchQuery) return true;
+      const cName = (inv.clientName || '').toLowerCase();
+      const invId = (inv.id || '').toLowerCase();
+      const phone = (inv.customerPhone || '').toLowerCase();
+      return cName.includes(searchQuery) || invId.includes(searchQuery) || phone.includes(searchQuery);
+    });
+
+    if (filteredInvoices.length === 0) {
+      list.innerHTML = `<li style="color: #94a3b8; font-size: 13px; text-align: center; padding: 15px;">No matches found for "<strong>${searchQuery}</strong>".</li>`;
+      return;
+    }
+
+    const sortedInvoices = [...filteredInvoices].sort((a, b) => {
+      const dueA = parseNumeric(a.balanceDue);
+      const dueB = parseNumeric(b.balanceDue);
+      
+      const hasDueA = dueA > 0.01;
+      const hasDueB = dueB > 0.01;
+
+      if (hasDueA && !hasDueB) return -1;
+      if (!hasDueA && hasDueB) return 1;
+      
+      return new Date(b.date || 0) - new Date(a.date || 0);
+    });
+
+    sortedInvoices.forEach(inv => {
+      const isLocked = Boolean(inv.locked);
+      const dueVal = parseNumeric(inv.balanceDue);
+      const hasDue = dueVal > 0.01;
+
+      const li = document.createElement('li');
+      li.className = 'invoice-card' + (hasDue ? ' has-due' : ' is-paid') + (isLocked ? ' is-locked' : '');
+
+      const dueHtml = hasDue 
+        ? `<span class="due-amount-text">Due: ${inv.balanceDue}</span>` 
+        : `<span class="paid-amount-text">Paid ✅</span>`;
+
+      const reminderBtnHtml = hasDue 
+        ? `<button class="btn-card-reminder" onclick="quickSendReminderWA('${inv.id}', event)" title="Quick WhatsApp Reminder">🔔 Remind</button>` 
+        : '';
+
+      li.innerHTML = `
+        <h4>
+          <span>${inv.id} - ${inv.clientName || 'General'}</span>
+          <span>${isLocked ? '🔒' : ''}</span>
+        </h4>
+        <p>Date: ${inv.date} | Mob: ${inv.customerPhone || 'N/A'}</p>
+        <div class="card-actions">
+          ${dueHtml}
+          <div class="card-btns">
+            ${reminderBtnHtml}
+            <button class="btn-lock ${isLocked ? 'locked' : ''}" onclick="toggleInvoiceLock('${inv.id}', event)" title="${isLocked ? 'Click to Unlock' : 'Click to Lock'}">
+              ${isLocked ? '🔒 Locked' : '🔓 Lock'}
+            </button>
+            <button class="btn-delete-inv" ${isLocked ? 'disabled title="Unlock first to delete"' : ''} onclick="deleteInvoice('${inv.id}', event)">
+              Delete
+            </button>
+          </div>
+        </div>
+        <div class="card-paid-toggle" onclick="event.stopPropagation()">
+          <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" ${!hasDue ? 'checked' : ''} onchange="toggleInvoicePaidFromCard('${inv.id}', this, event)">
+            <span>${!hasDue ? 'Payment Completed' : 'Mark as Paid'}</span>
+          </label>
+        </div>
+      `;
+      li.onclick = () => loadInvoice(inv.id);
+      list.appendChild(li);
+    });
+  }
+
+  function loadInvoice(id) {
+    const invoices = getSavedInvoices();
+    const inv = invoices.find(item => item.id === id);
+    if (!inv) return;
+
+    document.getElementById('invNo').value = inv.id;
+    document.getElementById('invDate').value = inv.date;
+    document.getElementById('companyName').value = inv.companyName;
+    document.getElementById('companyInfo').value = inv.companyInfo;
+    document.getElementById('clientName').value = inv.clientName || '';
+    document.getElementById('clientAddress').value = inv.clientAddress || '';
+    document.getElementById('customerPhone').value = inv.customerPhone || '';
+    document.getElementById('discount').value = inv.discount || 0;
+    document.getElementById('advancePaid').value = inv.advancePaid || 0;
+    
+    if (inv.paymentDetails) {
+      document.getElementById('paymentDetails').value = inv.paymentDetails;
+    }
+
+    const tbody = document.getElementById('itemsBody');
+    tbody.innerHTML = '';
+    inv.items.forEach(it => {
+      addRow(it.name, it.qty, it.unit || 'Nos', it.price);
+    });
+
+    calculate();
+    applyLockStateToForm(Boolean(inv.locked));
+  }
+
+  async function deleteInvoice(id, event) {
+    event.stopPropagation();
+
+    let invoices = getSavedInvoices();
+    const inv = invoices.find(item => item.id === id);
+
+    if (inv && inv.locked) {
+      alert('⚠️ Invoice ' + id + ' is locked! Unlock it before deleting.');
+      return;
+    }
+
+    if (!confirm('Are you sure you want to delete invoice ' + id + '?')) return;
+
+    invoices = invoices.filter(item => item.id !== id);
+    localStorage.setItem('my_invoices', JSON.stringify(invoices));
+    
+    const query = document.getElementById('searchInvoiceInput').value.trim().toLowerCase();
+    renderHistory(query);
+
+    const currentActiveId = document.getElementById('invNo').value.trim();
+    if (currentActiveId === id) {
+      createNewInvoice();
+    }
+
+    let scriptURL = localStorage.getItem('malvo_gsheet_url');
+    if (scriptURL && scriptURL.trim()) {
+      try {
+        await fetch(scriptURL.trim(), {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: "delete", id: id })
+        });
+        alert('Invoice ' + id + ' deleted from app and Google Sheet!');
+      } catch (err) {
+        alert('Deleted locally, but failed to delete from Google Sheet: ' + err.message);
+      }
+    } else {
+      alert('Invoice deleted locally.');
+    }
+  }
+
+  function createNewInvoice() {
+    const invoices = getSavedInvoices();
+    document.getElementById('invNo').value = 'INV-' + String(invoices.length + 1).padStart(3, '0');
+    document.getElementById('invDate').valueAsDate = new Date();
+    document.getElementById('clientName').value = '';
+    document.getElementById('clientAddress').value = '';
+    document.getElementById('customerPhone').value = '';
+    document.getElementById('discount').value = 0;
+    document.getElementById('advancePaid').value = 0;
+    document.getElementById('markPaidCheckbox').checked = false;
+    
+    const tbody = document.getElementById('itemsBody');
+    tbody.innerHTML = '';
+    addRow('SITE VISIT', 1, 'Nos', 2000);
+
+    applyLockStateToForm(false);
+  }
+
+  // Initialize
+  verifySession();
+  loadSavedLogo();
+  calculate();
+  renderHistory();
+</script>
+
+</body>
+</html>
